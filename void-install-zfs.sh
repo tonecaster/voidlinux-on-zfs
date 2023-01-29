@@ -31,6 +31,22 @@ Prompt : Variable : Example Value      : Explanation
   exit 0
 fi
 
+# ==============================
+#  Generate Internal Variables from settings
+# ==============================
+BOOTDEVICE="${DISK}"
+MNT="/run/ovlwork/mnt"
+CHROOT="chroot ${MNT}"
+ARCH=$(uname -m)
+# Automatically adjust the musl/glibc repo switch as needed
+if [ "${REPOTYPE}" = "musl" ] ; then
+  export XBPS_ARCH=${ARCH}-musl
+  REPO="https://alpha.de.repo.voidlinux.org/current/musl"
+else
+  export XBPS_ARCH=${ARCH}
+  REPO="https://alpha.de.repo.voidlinux.org/current"
+fi
+
 LOGFILE="${1}"
 
 exit_err(){
@@ -551,12 +567,12 @@ mkdir -p "${MNT}/var/db/xbps/keys"
 cp /var/db/xbps/keys/*.plist "${MNT}/var/db/xbps/keys/."
 #Copy over any custom repo definitions
 mkdir -p "${MNT}/etc/xbps.d"
-cp /etc/xbps.d/*.conf "${MNT}/etc/xbps.d/."
+###cp /etc/xbps.d/*.conf "${MNT}/etc/xbps.d/."
 #Ensure the trident repo config is installed (if not copied from the ISO itself)
 ###if [ !  -e "${MNT}/etc/xbps.d/trident.conf" ] ; then
 ###  wget "https://project-trident.org/repo/conf/trident.conf" -O "${MNT}/etc/xbps.d/trident.conf"
 ###fi
-chmod 644 ${MNT}/etc/xbps.d/*.conf
+###chmod 644 ${MNT}/etc/xbps.d/*.conf
 
 #NOTE: Do NOT install the ZFS package yet - that needs to run inside chroot for post-install actions.
 xbps-install -y -S -r "${MNT}" --repository="${REPO}"
@@ -798,21 +814,6 @@ if [ -n "${PACKAGES_CHROOT}" ] ; then
   getUser
 fi
 
-# ==============================
-#  Generate Internal Variables from settings
-# ==============================
-BOOTDEVICE="${DISK}"
-MNT="/run/ovlwork/mnt"
-CHROOT="chroot ${MNT}"
-ARCH=$(uname -m)
-# Automatically adjust the musl/glibc repo switch as needed
-if [ "${REPOTYPE}" = "musl" ] ; then
-  export XBPS_ARCH=${ARCH}-musl
-  REPO="https://alpha.de.repo.voidlinux.org/current/musl"
-else
-  export XBPS_ARCH=${ARCH}
-  REPO="https://alpha.de.repo.voidlinux.org/current"
-fi
 checkPackages
 
 #Verify that they want to begin the install now
