@@ -580,7 +580,7 @@ xbps-install -Sy -r "${MNT}" --repository="${REPO}" ${PACKAGES}
 exit_err $? "Could not install void packages!!"
 
 echo "Symlink /home to /usr/home mountpoint"
-rmdir ${MNT}/home
+mkdir ${MNT}/home
 ${CHROOT} ln -s /usr/home /home
 
 echo
