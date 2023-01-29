@@ -111,7 +111,7 @@ checkPackages(){
   #Reads in the list of PACKAGES_CHROOT and verifies they exist in the repo
   # Missing packages are put into the PACKAGES_MISSING variable
   echo "Verifying packages are in the repository..."
-  xbps-install -y -S --repository="${REPO}"
+  xbps-install -Sy --repository="${REPO}"
   local okpkgs
   for pkg in ${PACKAGES_CHROOT}
   do
@@ -272,10 +272,10 @@ installZfsBootMenu(){
     if [ -f "/root/xdowngrade-quiet" ] ; then
       cp /root/xdowngrade-quiet ${MNT}/usr/bin/xdowngrade
     else
-      ${CHROOT} xbps-install -y xtools
+      ${CHROOT} xbps-install -Sy xtools
     fi
     exit_err $? "Could not install package utilities!" 
-    ${CHROOT} xbps-install -y fzf kexec-tools perl-Config-IniFiles
+    ${CHROOT} xbps-install -Sy fzf kexec-tools perl-Config-IniFiles
     exit_err $? "Could not install bootloader utilities!"
     cp "${pkgfile}" "${MNT}${pkgfile}"
     ${CHROOT} xdowngrade ${pkgfile}
@@ -575,8 +575,8 @@ mkdir -p "${MNT}/etc/xbps.d"
 ###chmod 644 ${MNT}/etc/xbps.d/*.conf
 
 #NOTE: Do NOT install the ZFS package yet - that needs to run inside chroot for post-install actions.
-xbps-install -y -S -r "${MNT}" --repository="${REPO}"
-xbps-install -y -r "${MNT}" --repository="${REPO}" ${PACKAGES}
+xbps-install -Sy -r "${MNT}" --repository="${REPO}"
+xbps-install -Sy -r "${MNT}" --repository="${REPO}" ${PACKAGES}
 exit_err $? "Could not install void packages!!"
 
 echo "Symlink /home to /usr/home mountpoint"
@@ -617,10 +617,10 @@ ${CHROOT} echo "root:${ROOTPW}" |  ${CHROOT} chpasswd -c SHA512
 exit_err $? "Could not set root password"
 
 echo "Setting up repositories"
-${CHROOT} xbps-install -y -S
-${CHROOT} xbps-install -y void-repo-nonfree
+${CHROOT} xbps-install -Sy
+${CHROOT} xbps-install -Sy void-repo-nonfree
 exit_err $? "Could not install the nonfree repo"
-${CHROOT} xbps-install -y -S
+${CHROOT} xbps-install -Sy
 
 echo
 echo "Fix dracut and kernel config"
@@ -656,12 +656,12 @@ for pkg in zfs zfsbootmenu yq-go cryptsetup pam_zfscrypt ${PACKAGES_CHROOT}
 do
   echo
   echo "Installing package: ${pkg}"
-  ${CHROOT} xbps-install -y -c /tmp/pkg-cache ${pkg}
+  ${CHROOT} xbps-install -Sy -c /tmp/pkg-cache ${pkg}
   if [ $? -ne 0 ] ; then
     echo "[WARNING] Error installing package: ${pkg}"
     echo " - Retrying in 2 seconds"
     sleep 2
-    ${CHROOT} xbps-install -y -c /tmp/pkg-cache ${pkg}
+    ${CHROOT} xbps-install -Sy -c /tmp/pkg-cache ${pkg}
   fi
   exit_err $? "Could not install package: ${pkg}"
   rm ${MNT}/tmp/pkg-cache/*
