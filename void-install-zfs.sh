@@ -24,8 +24,8 @@ Prompt : Variable : Example Value      : Explanation
  Y     : ZPOOL     : voidz            			 : ZFS pool name to create
  N     : INITBE    : initial            		 : Name of the initial boot environment
  Y     : KEYMAP    : uk                 		 : Keyboard layout to use after install
- N     : TIMEZONE  : Europe/London		   		 : Timezone to use after install
- Y     : ROOTPW    : root		           		 : Password to set for the root account
+ N     : TIMEZONE  : Europe/London		   	 : Timezone to use after install
+ Y     : ROOTPW    : root		           	 : Password to set for the root account
  Y     : PACKAGES  : i3 conky	      			 : Space-delimited list of packages to install
 "
   exit 0
@@ -272,13 +272,16 @@ installZfsBootMenu(){
     if [ -f "/root/xdowngrade-quiet" ] ; then
       cp /root/xdowngrade-quiet ${MNT}/usr/bin/xdowngrade
     else
-      ${CHROOT} xbps-install -Sy xtools
+      chroot /run/ovlwork/mnt
+      chown root:root /
+      chmod 755 /
+      xbps-install -Sy xtools
     fi
-    exit_err $? "Could not install package utilities!" 
-    ${CHROOT} xbps-install -Sy fzf kexec-tools perl-Config-IniFiles
+    #exit_err $? "Could not install package utilities!" 
+    xbps-install -Sy fzf kexec-tools perl-Config-IniFiles
     exit_err $? "Could not install bootloader utilities!"
     cp "${pkgfile}" "${MNT}${pkgfile}"
-    ${CHROOT} xdowngrade ${pkgfile}
+    xdowngrade ${pkgfile}
     exit_err $? "Could not install zfsbootmenu!"
     if [ -f "/root/xdowngrade-quiet" ] ; then
       #Remove temporary xdowngrade script
@@ -286,21 +289,21 @@ installZfsBootMenu(){
     fi
   fi
   # Setup the config file within the chroot
-  ${CHROOT} yq-go -V | cut -d " " -f 3 | grep -Eq '^3'
+  yq-go -V | cut -d " " -f 3 | grep -Eq '^3'
   if [ $? -eq 0 ] ; then
     #yq-go version 3.x format
-    ${CHROOT} yq-go write -i /etc/zfsbootmenu/config.yaml Global.ManageImages true
-    ${CHROOT} yq-go write -i /etc/zfsbootmenu/config.yaml Components.Enabled true
+    yq-go write -i /etc/zfsbootmenu/config.yaml Global.ManageImages true
+    yq-go write -i /etc/zfsbootmenu/config.yaml Components.Enabled true
   else
     #yq-go version 4.x format
-    ${CHROOT} yq-go eval -i '.Global.ManageImages = true' /etc/zfsbootmenu/config.yaml
-    ${CHROOT} yq-go eval -i '.Components.Enabled = true' /etc/zfsbootmenu/config.yaml
+    yq-go eval -i '.Global.ManageImages = true' /etc/zfsbootmenu/config.yaml
+    yq-go eval -i '.Components.Enabled = true' /etc/zfsbootmenu/config.yaml
   fi
   # Ensure zfsbootmenu does not embed the nvidia/nouveau modules in it's image
   echo 'omit_drivers+=" nouveau nvidia "' >> ${MNT}/etc/zfsbootmenu/dracut.conf.d/nvidia.conf
   # Now install zfsbootmenu boot entries
   mkdir -p "${MNT}/boot/efi/EFI/void"
-  ${CHROOT} xbps-reconfigure -f zfsbootmenu
+  xbps-reconfigure -f zfsbootmenu
   # Setup rEFInd
   echo '"Quiet boot"  "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid"
 "Standard boot" "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid"
@@ -308,8 +311,8 @@ installZfsBootMenu(){
 "Single user boot" "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid"
 "Single user verbose boot" "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid"
 ' > "${MNT}/boot/efi/EFI/void/refind_linux.conf"
-  #${CHROOT} xbps-reconfigure -f refind
-  ${CHROOT} refind-install --usedefault "${EFIDRIVE}" #This creates the EFI/boot/bootx64.efi file
+  xbps-reconfigure -f refind
+  refind-install --usedefault "${EFIDRIVE}" #This creates the EFI/boot/bootx64.efi file
   exit_err $? "Could not install refind!"
   # Tweak the rEFInd configuration
   wget -c https://github.com/tonecaster/void Linux-on-zfs/blob/main/void-on-zfs-splash.png /root/
@@ -328,7 +331,7 @@ installZfsBootMenu(){
   # Cleanup the static package file
   rm "${MNT}${pkgfile}"
   # Re-run zfsbootmenu generation (just in case)
-  ${CHROOT} xbps-reconfigure -f zfsbootmenu
+  xbps-reconfigure -f zfsbootmenu
 }
 
 setupPamCrypt(){
@@ -575,13 +578,13 @@ mkdir -p "${MNT}/etc/xbps.d"
 ###chmod 644 ${MNT}/etc/xbps.d/*.conf
 
 #NOTE: Do NOT install the ZFS package yet - that needs to run inside chroot for post-install actions.
-xbps-install -Sy -r "${MNT}" --repository="${REPO}"
+#xbps-install -Sy -r "${MNT}" --repository="${REPO}"
 xbps-install -Sy -r "${MNT}" --repository="${REPO}" ${PACKAGES}
 exit_err $? "Could not install void packages!!"
 
 echo "Symlink /home to /usr/home mountpoint"
 mkdir ${MNT}/home
-${CHROOT} ln -s /usr/home /home
+ln -s /usr/home /home
 
 echo
 echo "copying a valid resolv.conf into directory, before chroot to get to the new install"
@@ -613,14 +616,14 @@ echo 'LANG="en_GB.UTF-8"' >> ${MNT}/etc/locale.conf
 echo "ENCRYPT_METHOD    SHA512" >> ${MNT}/etc/login.defs
 
 #Change the root password
-${CHROOT} echo "root:${ROOTPW}" |  ${CHROOT} chpasswd -c SHA512
+echo "root:${ROOTPW}" |  chpasswd -c SHA512
 exit_err $? "Could not set root password"
 
 echo "Setting up repositories"
-${CHROOT} xbps-install -Sy
-${CHROOT} xbps-install -Sy void-repo-nonfree
+xbps-install -Sy
+xbps-install -Sy void-repo-nonfree
 exit_err $? "Could not install the nonfree repo"
-${CHROOT} xbps-install -Sy
+xbps-install -Sy
 
 echo
 echo "Fix dracut and kernel config"
@@ -637,7 +640,7 @@ if [ "${linuxpkg}" = "" ] ; then
 fi
 echo "Got Linux Kernel Package: ${linuxpkg}"
 # Reconfigure that package
-${CHROOT} xbps-reconfigure -f "${linuxpkg}"
+xbps-reconfigure -f "${linuxpkg}"
 
 echo
 echo "-------------------------------"
@@ -656,12 +659,12 @@ for pkg in zfs zfsbootmenu yq-go cryptsetup pam_zfscrypt ${PACKAGES_CHROOT}
 do
   echo
   echo "Installing package: ${pkg}"
-  ${CHROOT} xbps-install -Sy -c /tmp/pkg-cache ${pkg}
+  xbps-install -Sy -c /tmp/pkg-cache ${pkg}
   if [ $? -ne 0 ] ; then
     echo "[WARNING] Error installing package: ${pkg}"
     echo " - Retrying in 2 seconds"
     sleep 2
-    ${CHROOT} xbps-install -Sy -c /tmp/pkg-cache ${pkg}
+    xbps-install -Sy -c /tmp/pkg-cache ${pkg}
   fi
   exit_err $? "Could not install package: ${pkg}"
   rm ${MNT}/tmp/pkg-cache/*
@@ -677,7 +680,7 @@ setupPamCrypt
 # Now setup encrypted SWAP on the device
 if [ -n "${SWAPSIZE}" ] && [ "0" != "${SWAPSIZE}" ] ; then
   echo "Setting up encrypted SWAP on the device: ${SWAPSIZE}"
-  ${CHROOT} zfs create -V ${SWAPSIZE} -b $(getconf PAGESIZE) -o compression=zle \
+  zfs create -V ${SWAPSIZE} -b $(getconf PAGESIZE) -o compression=zle \
       -o logbias=throughput -o sync=always \
       -o primarycache=metadata -o secondarycache=none \
       -o com.sun:auto-snapshot=false ${ZPOOL}/swap
@@ -707,7 +710,7 @@ for service in ${SERVICES_ENABLED}
 do
   if [ ! -e "${MNT}/etc/sv/${service}" ] ; then continue ; fi
   echo " -> ${service}"
-  ${CHROOT} ln -s /etc/sv/${service} /var/service/${service}
+  ln -s /etc/sv/${service} /var/service/${service}
   exit_err $? "Could not enable service: ${service}"
 done
 
@@ -716,16 +719,16 @@ echo "-------------------------------"
 echo "Step 6: Setup Bootloader(s)"
 echo "-------------------------------"
 echo
-${CHROOT} zpool set cachefile=/etc/zfs/zpool.cache "${ZPOOL}"
-${CHROOT} xbps-reconfigure -f "${linuxpkg}"
-#${CHROOT} lsinitrd -m
+zpool set cachefile=/etc/zfs/zpool.cache "${ZPOOL}"
+xbps-reconfigure -f "${linuxpkg}"
+#lsinitrd -m
 
 #Stamp EFI loader on the EFI partition
 mkdir -p "${MNT}/boot/efi/EFI/void/"
 installZfsBootMenu
 
 # Take an initial snapshot of the boot environment
-${CHROOT} zfs snapshot ${ZPOOL}/ROOT/${INITBE}@cleaninstall
+zfs snapshot ${ZPOOL}/ROOT/${INITBE}@cleaninstall
 echo
 echo "[SUCCESS] Reboot the system and remove the install media to boot into the new system"
 
