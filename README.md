@@ -1,4 +1,8 @@
 # voidlinux-on-zfs
+DISCLAIMER: This is a work in progress... NOT READY YET!!!
+DO NOT ATTEMPT TO USE IT UNLESS YOU'RE READY TO DEAL WITH SOME TROUBLESHOOTINGS...
+
+
 Voidlinux on ZFS related stuff
 
 
