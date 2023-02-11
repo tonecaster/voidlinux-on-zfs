@@ -2,10 +2,18 @@
 
 
 SERVER_PACKAGES="git bash-completion neovim firejail openvpn neofetch sl wget"
-LITE_PACKAGES="${SERVER_PACKAGES} xorg-server xorg-apps xorg-minimal xinit xterm xcape xorg-video-drivers xf86-video-intel xf86-input-libinput ntfs-3g fuse-exfat simple-mtpfs xdg-utils setxkbmap tlp powertop htop lm_sensors fzf intel-ucode alsa-utils alsa-plugins alsa-lib alsa-firmware smartmontools wget curl urlview base-devel fontconfig-devel libX11-devel libXft-devel libXinerama-devel libXft-devel freetype-devel bluez acpi_call-dkms"
-FULL_PACKAGES="${LITE_PACKAGES} telegram-desktop vlc firefox trojita pianobar libreoffice cups foomatic-db foomatic-db-engine cups-filters"
+LITE_PACKAGES="${SERVER_PACKAGES} xorg-server xorg-apps xorg-minimal xinit xterm xcape xorg-video-drivers \
+	xf86-video-intel xf86-input-libinput libX11-devel libXft-devel libXinerama-devel libXft-devel \
+	freetype-devel xdg-utils setxkbmap ntfs-3g fuse-exfat simple-mtpfs xdg-utils setxkbmap tlp powertop \
+	htop lm_sensors fzf intel-ucode alsa-utils alsa-plugins alsa-lib alsa-firmware smartmontools wget curl \
+	urlview base-devel fontconfig-devel bluez acpi_call-dkms bridge-utils zstd zfsbootmenu efibootmgr \
+	gummiboot chrony cronie acpid socklog-void iwd dhclient openresolv ansible"
 
-SERVICES_ENABLED="dbus dhcpcd cupsd wpa_supplicant bluetoothd acpid nftables dcron autofs openntpd sddm"
+SERVICES_ENABLED="dbus dhcpcd cupsd wpa_supplicant bluetoothd acpid nftables dcron autofs openntpd"
+
+KEYMAP="uk"
+TIMEZONE="Europe/London"
+LANG="en_GB.UTF-8"
 
 if [ "${1}" = "-h" ] || [ "${1}" = "help" ] || [ "${1}" = "--help" ] ; then
 echo "Void Linux On ZFS Installer
@@ -35,7 +43,7 @@ fi
 #  Generate Internal Variables from settings
 # ==============================
 BOOTDEVICE="${DISK}"
-MNT="/run/ovlwork/mnt"
+MNT="/mnt"
 CHROOT="chroot ${MNT}"
 ARCH=$(uname -m)
 # Automatically adjust the musl/glibc repo switch as needed
@@ -203,12 +211,9 @@ echo -ne \\x$a\\x$b\\x$c\\x$d > /etc/hostid
 }
 
 getPackages(){
-opts="Full \"Desktop install with many extra utilities\" Lite \"Desktop install only\" Server \"Base system setup only\" Void \"Bare-bones install on ZFS\" "
+opts="Lite \"i3wm install only\" Server \"Base system setup only\" Void \"Bare-bones install on ZFS\" "
   get_dlg_ans "--menu \"Select the package set to install. Packages are easily changed later.\" 0 0 0 ${opts}"
   case ${ANS} in
-    Full)
-	PACKAGES_CHROOT="${FULL_PACKAGES}"
-	;;
     Lite)
 	PACKAGES_CHROOT="${LITE_PACKAGES}"
 	;;
@@ -272,7 +277,7 @@ installZfsBootMenu(){
     if [ -f "/root/xdowngrade-quiet" ] ; then
       cp /root/xdowngrade-quiet ${MNT}/usr/bin/xdowngrade
     else
-      chroot /run/ovlwork/mnt
+      chroot /mnt
       chown root:root /
       chmod 755 /
       xbps-install -Sy xtools
@@ -323,7 +328,7 @@ installZfsBootMenu(){
   echo "banner $(basename ${bootsplash})" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
   echo "banner_scale fillscreen" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
   #Now register the EFI boot entry properly (default void setup does not always work)
-  efibootmgr -c -d "${DISK}" -p 1 -L Void Linux -l "\\EFI\\boot\\bootx64.efi"
+  efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\EFI\\boot\\bootx64.efi"
   #Ensure refind is setup to boot next (even if they don't eject the ISO)
   bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
   efibootmgr -n "${bootnext}"
@@ -610,7 +615,7 @@ echo "KEYMAP=\"${KEYMAP}\"" >> ${MNT}/etc/rc.conf
 echo "TIMEZONE=\"${TIMEZONE}\"" >> ${MNT}/etc/rc.conf
 echo "HARDWARECLOCK=\"UTC\"" >> ${MNT}/etc/rc.conf
 echo ${NHOSTNAME} > ${MNT}/etc/hostname
-echo 'LANG="en_GB.UTF-8"' >> ${MNT}/etc/locale.conf
+echo "LANG=\"${LANG}\"" >> ${MNT}/etc/locale.conf
 
 #ensure passwords are encrypted by the most-secure algorithm available by default
 echo "ENCRYPT_METHOD    SHA512" >> ${MNT}/etc/login.defs
