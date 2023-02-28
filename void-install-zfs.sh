@@ -320,7 +320,7 @@ installZfsBootMenu(){
   refind-install --usedefault "${EFIDRIVE}" #This creates the EFI/boot/bootx64.efi file
   exit_err $? "Could not install refind!"
   # Tweak the rEFInd configuration
-  wget -c https://github.com/tonecaster/void Linux-on-zfs/blob/main/void-on-zfs-splash.png /root/
+  wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /root/
   bootsplash=$(ls /root/void-on-zfs-splash.png)
   cp "${bootsplash}" ${MNT}/boot/efi/EFI/boot/.
   echo "# Void Linux On ZFS options" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
@@ -564,7 +564,6 @@ do
   mount --rbind /${dir} ${MNT}/${dir}
   exit_err $? "Could not mount directory: ${MNT}/${dir}"
 done
-
 
 echo
 echo "-------------------------------"
