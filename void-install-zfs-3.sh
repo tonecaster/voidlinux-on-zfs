@@ -395,9 +395,9 @@ EOF
 # Configure fstab
 print 'Configure fstab'
 cat >> /mnt/etc/fstab <<"EOF"
-tmpfs     /dev/shm		tmpfs     rw,nosuid,nodev,noexec,inode64  	0 0
-tmpfs     /tmp          tmpfs     defaults,nosuid,nodev           	0 0
-efivarfs  /sys/firmware/efi/efivars efivarfs  defaults				0 0
+tmpfs     /dev/shm	tmpfs     rw,nosuid,nodev,noexec,inode64  0 0
+tmpfs     /tmp          tmpfs     defaults,nosuid,nodev           0 0
+efivarfs  /sys/firmware/efi/efivars efivarfs  defaults		0 0
 EOF
 
 echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
