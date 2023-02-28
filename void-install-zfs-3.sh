@@ -3,14 +3,6 @@
 source /etc/os-release
 export ID=${ID}z
 
-PKGS="git bash-completion neovim firejail openvpn neofetch sl xorg-server xorg-apps xorg-minimal \
-      xinit xterm xcape xorg-video-drivers xf86-video-intel xf86-input-libinput libX11-devel \
-      libXft-devel libXinerama-devel libXft-devel freetype-devel xdg-utils setxkbmap \
-      ntfs-3g fuse-exfat simple-mtpfs tlp powertop htop lm_sensors fzf intel-ucode alsa-utils \
-      alsa-plugins alsa-lib alsa-firmware smartmontools wget curl urlview base-devel fontconfig-devel \
-      bluez acpi_call-dkms bridge-utils zstd zfsbootmenu efibootmgr gummiboot chrony cronie acpid \
-      socklog-void iwd dhclient openresolv ansible"
-
 set -e
 
 exec &> >(tee "configure.log")
@@ -301,6 +293,66 @@ print 'Install packages'
 #  git
 #  ansible
 #  )
+
+PKGS=(
+git 
+bash-completion 
+neovim 
+firejail 
+openvpn 
+neofetch 
+sl 
+xorg-server 
+xorg-apps 
+xorg-minimal 
+xinit 
+xterm 
+xcape 
+xorg-video-drivers 
+xf86-video-intel 
+xf86-input-libinput 
+libX11-devel 
+libXft-devel 
+libXinerama-devel 
+libXft-devel 
+freetype-devel 
+xdg-utils 
+setxkbmap 
+ntfs-3g 
+fuse-exfat 
+simple-mtpfs 
+tlp 
+powertop 
+htop 
+lm_sensors 
+fzf 
+intel-ucode 
+alsa-utils 
+alsa-plugins 
+alsa-lib 
+alsa-firmware 
+smartmontools 
+wget 
+curl 
+urlview 
+base-devel 
+fontconfig-devel 
+bluez 
+acpi_call-dkms 
+bridge-utils 
+zstd 
+zfsbootmenu 
+efibootmgr 
+gummiboot 
+chrony 
+cronie 
+acpid 
+socklog-void 
+iwd 
+dhclient 
+openresolv 
+ansible
+)
 
 #XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${packages[@]}"
 XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${PKGS[@]}"
