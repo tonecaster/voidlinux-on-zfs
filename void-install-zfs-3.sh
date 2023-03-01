@@ -564,7 +564,8 @@ efibootmgr --disk "$DISK" \
   --verbose
 
 # Setup rEFInd
-#mkdir -p "/boot/efi/EFI/void"
+mkdir -p "/efi/EFI/BOOT"
+wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/refind.conf-sample /efi/EFI/BOOT/refind.conf
 echo "Quiet boot" >> /efi/EFI/BOOT/refind.conf
 echo "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
 echo "Standard boot" >> /efi/EFI/BOOT/refind.conf
