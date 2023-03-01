@@ -568,7 +568,7 @@ efibootmgr --disk "$DISK" \
 
 # Setup rEFInd
 mkdir -p "/efi/EFI/BOOT"
-wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/refind.conf-sample /efi/EFI/BOOT/refind.conf
+wget -O /efi/EFI/BOOT/refind.conf -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/refind.conf-sample
 echo "Quiet boot" >> /efi/EFI/BOOT/refind.conf
 echo "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
 echo "Standard boot" >> /efi/EFI/BOOT/refind.conf
@@ -584,7 +584,7 @@ xbps-reconfigure -f refind
 refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
 # Tweak the rEFInd configuration
 mkdir /usr/share/voidz-artwork
-wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /usr/share/voidz-artwork/
+wget -O /usr/share/voidz-artwork/void-on-zfs-splash.png -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png
 bootsplash=$(ls /usr/share/voidz-artwork/void-on-zfs-splash.png)
 cp "${bootsplash}" /efi/EFI/BOOT/.
 echo "# Void Linux On ZFS options" >> /efi/EFI/BOOT/refind.conf
