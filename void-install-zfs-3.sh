@@ -476,6 +476,10 @@ $user ALL=(ALL) NOPASSWD:ALL
 Defaults rootpw
 EOF
 
+# Turn off that annoying console bell
+touch /etc/modprobe.d/blacklist.conf
+echo "blacklist pcspkr" >> /etc/modprobe.d/blacklist.conf
+
 ### Configure zfsbootmenu
 
 # Create dirs
