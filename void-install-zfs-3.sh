@@ -318,6 +318,7 @@ libXft-devel
 freetype-devel 
 xdg-utils 
 setxkbmap 
+intel-ucode
 ntfs-3g 
 fuse-exfat 
 simple-mtpfs 
@@ -341,6 +342,7 @@ bluez
 acpi_call-dkms 
 bridge-utils 
 zstd 
+zfs
 zfsbootmenu 
 efibootmgr 
 gummiboot 
@@ -438,7 +440,7 @@ chroot /mnt/ /bin/bash -e <<EOF
 #  xbps-reconfigure -f glibc-locales
   # Add user
   zfs create zroot/data/home/${user}
-  useradd -m ${user} -G network,wheel,socklog,video,audio,_seatd,input
+  useradd -m ${user} -G network,wheel,socklog,video,audio,input
   chown -R ${user}:${user} /home/${user}
   # Configure fstab
   grep efi /proc/mounts > /etc/fstab
@@ -449,7 +451,7 @@ print 'Configure fstab'
 cat >> /mnt/etc/fstab <<"EOF"
 tmpfs     /dev/shm	tmpfs     rw,nosuid,nodev,noexec,inode64  0 0
 tmpfs     /tmp          tmpfs     defaults,nosuid,nodev           0 0
-efivarfs  /sys/firmware/efi/efivars efivarfs  defaults		0 0
+efivarfs  /sys/firmware/efi/efivars efivarfs  defaults		  0 0
 EOF
 
 echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
@@ -466,7 +468,7 @@ chroot /mnt /bin/passwd "$user"
 print 'Configure sudo'
 cat > /mnt/etc/sudoers <<EOF
 root ALL=(ALL) ALL
-$user ALL=(ALL) ALL
+$user ALL=(ALL) NOPASSWD:ALL
 Defaults rootpw
 EOF
 
@@ -556,6 +558,36 @@ efibootmgr --disk "$DISK" \
   --label "ZFSBootMenu" \
   --loader "\EFI\ZBM\vmlinuz.efi" \
   --verbose
+
+# Setup rEFInd
+pkgfile=$(ls /root/zfsbootmenu*)
+mkdir -p "/boot/efi/EFI/void"
+echo '"Quiet boot"  "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid"
+"Standard boot" "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid"
+"Verbose boot" "ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid"
+"Single user boot" "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid"
+"Single user verbose boot" "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid"
+' > "/boot/efi/EFI/void/refind_linux.conf"
+xbps-reconfigure -f refind
+refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
+# Tweak the rEFInd configuration
+wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /root/
+bootsplash=$(ls /root/void-on-zfs-splash.png)
+cp "${bootsplash}" /boot/efi/EFI/boot/.
+echo "# Void Linux On ZFS options" >> "/boot/efi/EFI/boot/refind.conf"
+echo "timeout 5" >> "/boot/efi/EFI/boot/refind.conf"
+echo "banner $(basename ${bootsplash})" >> "/boot/efi/EFI/boot/refind.conf"
+echo "banner_scale fillscreen" >> "/boot/efi/EFI/boot/refind.conf"
+#Now register the EFI boot entry properly (default void setup does not always work)
+efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\EFI\\boot\\bootx64.efi"
+#Ensure refind is setup to boot next (even if they don't eject the ISO)
+bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
+efibootmgr -n "${bootnext}"
+efibootmgr -t 5 #Set the timeout to 5 seconds if not previously set from rEFInd config
+# Cleanup the static package file
+rm "${pkgfile}"
+# Re-run zfsbootmenu generation (just in case)
+xbps-reconfigure -f zfsbootmenu
 
 # Umount all parts
 print 'Umount all parts'
