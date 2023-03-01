@@ -354,6 +354,7 @@ iwd
 dhclient 
 openresolv 
 ansible
+refind
 )
 
 #XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${packages[@]}"
@@ -421,29 +422,32 @@ read -r -p "Username: " user
 
 ### Chroot
 print 'Chroot to configure services'
-chroot /mnt/ /bin/bash -e <<EOF
-  # Configure DNS
-  resolvconf -u
-  # Configure services
-  #ln -s /etc/sv/dhcpcd-eth0 /etc/runit/runsvdir/default/
-  ln -s /etc/sv/dhcpcd /etc/runit/runsvdir/default/
-  ln -s /etc/sv/wpa_supplicant /etc/runit/runsvdir/default/
-  ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
-  ln -s /etc/sv/chronyd /etc/runit/runsvdir/default/
-  ln -s /etc/sv/crond /etc/runit/runsvdir/default/
-  ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
-  #ln -s /etc/sv/seatd /etc/runit/runsvdir/default/
-  ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
-  ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
-  ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
+chroot /mnt/ /bin/bash -e <<EOF 
+# Configure DNS
+resolvconf -u
+
+# Configure services
+#ln -s /etc/sv/dhcpcd-eth0 /etc/runit/runsvdir/default/
+ln -s /etc/sv/dhcpcd /etc/runit/runsvdir/default/
+ln -s /etc/sv/wpa_supplicant /etc/runit/runsvdir/default/ 
+ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
+ln -s /etc/sv/chronyd /etc/runit/runsvdir/default/
+ln -s /etc/sv/crond /etc/runit/runsvdir/default/
+ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
+#ln -s /etc/sv/seatd /etc/runit/runsvdir/default/
+ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
+ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
+ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
 #  # Generates locales
 #  xbps-reconfigure -f glibc-locales
-  # Add user
-  zfs create zroot/data/home/${user}
-  useradd -m ${user} -G network,wheel,socklog,video,audio,input
-  chown -R ${user}:${user} /home/${user}
-  # Configure fstab
-  grep efi /proc/mounts > /etc/fstab
+
+# Add user
+zfs create zroot/data/home/${user}
+useradd -m ${user} -G network,wheel,socklog,video,audio,input
+chown -R ${user}:${user} /home/${user}
+
+# Configure fstab
+grep efi /proc/mounts > /etc/fstab
 EOF
 
 # Configure fstab
@@ -561,12 +565,19 @@ efibootmgr --disk "$DISK" \
 
 # Setup rEFInd
 mkdir -p "/boot/efi/EFI/void"
-echo '"Quiet boot"  "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid"
-"Standard boot" "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid"
-"Verbose boot" "ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid"
-"Single user boot" "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid"
-"Single user verbose boot" "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid"
-' > "/boot/efi/EFI/void/refind_linux.conf"
+cat > /boot/efi/EFI/void/refind_linux.conf <<EOF
+Quiet boot 
+ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid
+Standard boot 
+ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid 
+Verbose boot 
+ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid 
+Single user boot 
+ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid 
+Single user verbose boot 
+ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid 
+EOF
+
 xbps-reconfigure -f refind
 refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
 # Tweak the rEFInd configuration
