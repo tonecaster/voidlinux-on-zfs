@@ -578,7 +578,7 @@ Single user verbose boot
 ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid 
 EOF
 
-xbps-reconfigure -f refind
+#xbps-reconfigure -f refind
 refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
 # Tweak the rEFInd configuration
 wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /root/
