@@ -589,7 +589,7 @@ bootsplash=$(ls /usr/share/voidz-artwork/void-on-zfs-splash.png)
 cp "${bootsplash}" /efi/EFI/BOOT/.
 echo "# Void Linux On ZFS options" >> /efi/EFI/BOOT/refind.conf
 echo "timeout 5" >> /efi/EFI/BOOT/refind.conf
-echo "banner $(basename ${bootsplash})" >> /efi/EFI/BOOT/refind.conf
+echo "banner $(ID ${bootsplash})" >> /efi/EFI/BOOT/refind.conf
 echo "banner_scale fillscreen" >> /efi/EFI/BOOT/refind.conf
 #Now register the EFI boot entry properly (default void setup does not always work)
 efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\efi\\EFI\\BOOT\\bootx64.efi"
