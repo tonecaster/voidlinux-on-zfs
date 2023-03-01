@@ -564,32 +564,31 @@ efibootmgr --disk "$DISK" \
   --verbose
 
 # Setup rEFInd
-mkdir -p "/boot/efi/EFI/void"
-cat > /boot/efi/EFI/void/refind_linux.conf <<EOF
-Quiet boot 
-ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid
-Standard boot 
-ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid 
-Verbose boot 
-ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid 
-Single user boot 
-ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid 
-Single user verbose boot 
-ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid 
-EOF
+#mkdir -p "/boot/efi/EFI/void"
+echo "Quiet boot" >> /efi/EFI/BOOT/refind.conf
+echo "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
+echo "Standard boot" >> /efi/EFI/BOOT/refind.conf
+echo "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
+echo "Verbose boot" >> /efi/EFI/BOOT/refind.conf
+echo "ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
+echo "Single user boot" >> /efi/EFI/BOOT/refind.conf
+echo "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf 
+echo "Single user verbose boot" >> /efi/EFI/BOOT/refind.conf
+echo "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
 
-#xbps-reconfigure -f refind
+xbps-reconfigure -f refind
 refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
 # Tweak the rEFInd configuration
-wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /root/
-bootsplash=$(ls /root/void-on-zfs-splash.png)
-cp "${bootsplash}" /boot/efi/EFI/boot/.
-echo "# Void Linux On ZFS options" >> "/boot/efi/EFI/boot/refind.conf"
-echo "timeout 5" >> "/boot/efi/EFI/boot/refind.conf"
-echo "banner $(basename ${bootsplash})" >> "/boot/efi/EFI/boot/refind.conf"
-echo "banner_scale fillscreen" >> "/boot/efi/EFI/boot/refind.conf"
+mkdir /usr/share/voidz-artwork
+wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /usr/share/voidz-artwork/
+bootsplash=$(ls /usr/share/voidz-artwork/void-on-zfs-splash.png)
+cp "${bootsplash}" /efi/EFI/BOOT/.
+echo "# Void Linux On ZFS options" >> /efi/EFI/BOOT/refind.conf
+echo "timeout 5" >> /efi/EFI/BOOT/refind.conf
+echo "banner $(basename ${bootsplash})" >> /efi/EFI/BOOT/refind.conf
+echo "banner_scale fillscreen" >> /efi/EFI/BOOT/refind.conf
 #Now register the EFI boot entry properly (default void setup does not always work)
-efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\EFI\\boot\\bootx64.efi"
+efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\efi\\EFI\\BOOT\\bootx64.efi"
 #Ensure refind is setup to boot next (even if they don't eject the ISO)
 bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
 efibootmgr -n "${bootnext}"
