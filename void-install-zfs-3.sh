@@ -432,7 +432,7 @@ chroot /mnt/ /bin/bash -e <<EOF
   ln -s /etc/sv/chronyd /etc/runit/runsvdir/default/
   ln -s /etc/sv/crond /etc/runit/runsvdir/default/
   ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
-  ln -s /etc/sv/seatd /etc/runit/runsvdir/default/
+  #ln -s /etc/sv/seatd /etc/runit/runsvdir/default/
   ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
   ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
   ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
@@ -560,7 +560,6 @@ efibootmgr --disk "$DISK" \
   --verbose
 
 # Setup rEFInd
-pkgfile=$(ls /root/zfsbootmenu*)
 mkdir -p "/boot/efi/EFI/void"
 echo '"Quiet boot"  "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid"
 "Standard boot" "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid"
@@ -584,8 +583,6 @@ efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\EFI\\boot\\bootx64.efi"
 bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
 efibootmgr -n "${bootnext}"
 efibootmgr -t 5 #Set the timeout to 5 seconds if not previously set from rEFInd config
-# Cleanup the static package file
-rm "${pkgfile}"
 # Re-run zfsbootmenu generation (just in case)
 xbps-reconfigure -f zfsbootmenu
 
