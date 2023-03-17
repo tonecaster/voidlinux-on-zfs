@@ -276,28 +276,11 @@ echo "GUMMIBOOT_DISABLE=1" > /mnt/etc/default/gummiboot
 
 # Install packages
 print 'Install packages'
-#packages=(
-#  intel-ucode
-#  zfs
-#  zfsbootmenu
-#  efibootmgr
-#  gummiboot # required by zfsbootmenu
-#  chrony # ntp
-#  cronie # cron
-#  seatd # minimal seat management daemon, required by sway
-#  acpid # power management
-#  socklog-void # syslog daemon
-#  iwd # wifi daemon
-#  dhclient
-#  openresolv # dns
-#  git
-#  ansible
-#  )
 
 PKGS=(
 git 
 bash-completion 
-neovim 
+vim 
 firejail 
 openvpn 
 neofetch 
@@ -308,6 +291,9 @@ xorg-minimal
 xinit 
 xterm 
 xcape 
+xset
+xrdb
+setxkbmap
 xorg-video-drivers 
 xf86-video-intel 
 xf86-input-libinput 
@@ -322,6 +308,7 @@ intel-ucode
 ntfs-3g 
 fuse-exfat 
 simple-mtpfs 
+udevil
 tlp 
 powertop 
 htop 
@@ -354,7 +341,6 @@ iwd
 dhclient 
 openresolv 
 ansible
-refind
 )
 
 #XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${packages[@]}"
@@ -378,7 +364,7 @@ EnableNetworkConfiguration=true
 EOF
 
 # Copy wpa_supplicant
-mkdir -p /mnt/wpa_supplicant
+mkdir -p /mnt/etc/wpa_supplicant
 cp /etc/wpa_supplicant/wpa_supplicant.conf /mnt/etc/wpa_supplicant/wpa_supplicant.conf
 
 # Configure DNS
@@ -438,7 +424,7 @@ ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
 ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
 ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
 ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
-#  # Generates locales
+
 #  xbps-reconfigure -f glibc-locales
 
 # Add user
@@ -453,12 +439,13 @@ EOF
 # Configure fstab
 print 'Configure fstab'
 cat >> /mnt/etc/fstab <<"EOF"
-tmpfs     /dev/shm	tmpfs     rw,nosuid,nodev,noexec,inode64  0 0
-tmpfs     /tmp          tmpfs     defaults,nosuid,nodev           0 0
-efivarfs  /sys/firmware/efi/efivars efivarfs  defaults		  0 0
+tmpfs  /dev/shm  tmpfs  rw,nosuid,nodev,noexec,inode64  0 0
+tmpfs  /tmp  tmpfs  defaults,nosuid,nodev  0 0
+efivarfs  /sys/firmware/efi/efivars  efivarfs  defaults  0 0
+PARTLABEL=SWAP  swap  swap  rw,noatime,discard  0 0      
 EOF
 
-echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
+#echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
 
 # Set root passwd
 print 'Set root password'
@@ -483,7 +470,6 @@ echo "blacklist pcspkr" > /etc/modprobe.d/blacklist.conf
 
 # Create dirs
 mkdir -p /mnt/efi/EFI/ZBM /etc/zfsbootmenu/dracut.conf.d
-#wget -c https://github.com/tonecaster/voidlinux-on-zfs/blob/main/void-on-zfs-splash.png /mnt/efi/EFI/ZBM/
 
 # Generate zfsbootmenu efi
 print 'Configure zfsbootmenu'
@@ -510,7 +496,7 @@ EOF
 
 mkdir -p /mnt/etc/cmdline.d/
 cat > /mnt/etc/cmdline.d/keymap.conf <<EOF
-rd.vconsole.keymap=uk
+rd.vconsole.keymap=gb
 EOF
 
 # Set cmdline
@@ -565,40 +551,6 @@ efibootmgr --disk "$DISK" \
   --label "ZFSBootMenu" \
   --loader "\EFI\ZBM\vmlinuz.efi" \
   --verbose
-
-# Setup rEFInd
-#mkdir -p "/efi/EFI/BOOT"
-#wget -O /efi/EFI/BOOT/refind.conf -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/refind.conf-sample
-#echo "Quiet boot" >> /efi/EFI/BOOT/refind.conf
-#echo "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
-#echo "Standard boot" >> /efi/EFI/BOOT/refind.conf
-#echo "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
-#echo "Verbose boot" >> /efi/EFI/BOOT/refind.conf
-#echo "ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
-#echo "Single user boot" >> /efi/EFI/BOOT/refind.conf
-#echo "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf 
-#echo "Single user verbose boot" >> /efi/EFI/BOOT/refind.conf
-#echo "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid" >> /efi/EFI/BOOT/refind.conf
-
-#xbps-reconfigure -f refind
-refind-install --usedefault "${EFI}" #This creates the EFI/boot/bootx64.efi file
-# Tweak the rEFInd configuration
-#mkdir /usr/share/voidz-artwork
-#wget -O /usr/share/voidz-artwork/void-on-zfs-splash.png -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png
-#bootsplash=$(ls /usr/share/voidz-artwork/void-on-zfs-splash.png)
-$cp "${bootsplash}" /efi/EFI/BOOT/.
-#echo "# Void Linux On ZFS options" >> /efi/EFI/BOOT/refind.conf
-#echo "timeout 5" >> /efi/EFI/BOOT/refind.conf
-#echo "banner $(basename ${bootsplash})" >> /efi/EFI/BOOT/refind.conf
-#echo "banner_scale fillscreen" >> /efi/EFI/BOOT/refind.conf
-#Now register the EFI boot entry properly (default void setup does not always work)
-#efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\efi\\EFI\\BOOT\\bootx64.efi"
-#Ensure refind is setup to boot next (even if they don't eject the ISO)
-#bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
-#efibootmgr -n "${bootnext}"
-#efibootmgr -t 5 #Set the timeout to 5 seconds if not previously set from rEFInd config
-# Re-run zfsbootmenu generation (just in case)
-#xbps-reconfigure -f zfsbootmenu
 
 # Umount all parts
 print 'Umount all parts'
