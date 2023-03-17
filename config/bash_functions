@@ -1,0 +1,109 @@
+### functions and special aliases
+#
+alias ltou='rename 'y/a-z/A-Z/' *'
+alias utol='rename 'y/A-Z/a-z/' *'
+alias cimg='convert *.jpg -resize 900x900 -quality 95 cover.jpg'
+alias sflc='split2flac -c cover.jpg'
+alias f2m3='for f in *.flac; do flac -cd "$f" | lame -b 192 - "${f%.*}".mp3; done'
+alias fats='sudo fatsort -n'
+#alias wdsk='dvd+rw-format -blank /dev/sr0'
+#
+#
+shdl() { curl -O $(curl -s http://sci-hub.tw/"$@" | grep location.href | grep -o http.*pdf) ;}
+
+# combine mkdir and cd
+mkcd () {
+  mkdir "$1"
+  cd "$1"
+}
+
+# # ex - archive extractor
+# # usage: ex <file>
+xtrc ()
+{
+  if [ -f $1 ] ; then
+    case $1 in
+      *.tar.bz2)   tar xjf $1   	;;
+      *.tar.gz)    tar xzf $1   	;;
+      *.bz2)       bunzip2 $1   	;;
+      *.rar)       unrar x $1   	;;
+      *.gz)        gunzip $1    	;;
+      *.tar)       tar xf $1    	;;
+      *.tbz2)      tar xjf $1   	;;
+      *.tgz)       tar xzf $1   	;;
+      *.zip)       unzip $1     	;;
+      *.Z)         uncompress $1	;;
+      *.7z)        7z x $1      	;;
+      *)           echo "'$1' cannot be extracted via ex()" ;;
+    esac
+  else
+    echo "'$1' is not a valid file"
+  fi
+}
+
+
+gcvr (){
+ffmpeg -i $1 cover.jpg
+}
+
+
+## burn iso file
+busb (){
+sudo dd bs=1M if=$1 of=/dev/sda status=progress
+}
+
+biso (){
+pv -tpreb $1 | sudo dd of=/dev/$2 bs=1M conv=sync
+}
+
+#biso (){
+#pv -tpreb $1 | sudo dd bs=1M of=/dev/sdb conv=notrunc,noerror
+#}
+
+
+# smart resize images with imagemagick
+# usage:_> smartresizwe size inputfile.png
+
+srsz (){
+mogrify -filter Triangle -define filter:support=2 \
+-unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 \
+-quality 82 -define jpeg:fancy-upsampling=off -interlace none \
+-colorspace sRGB -resize
+}
+
+
+#pmus (){
+#MUSDIR=~/Music
+#cd $MUSDIR
+#ls
+#echo "Which album should we play?"
+#read album
+#}
+
+
+# machine information
+mach()
+{
+    echo -e "\nMachine information:" ; uname -a
+    echo -e "\nUsers logged on:" ; w -h
+    echo -e "\nCurrent date :" ; date
+    echo -e "\nMachine status :" ; uptime
+    echo -e "\nMemory status :" ; free
+    echo -e "\nFilesystem status :"; df -h
+}
+
+
+# find certain file type and list it:
+fils()
+{
+find . -type f -iname '*.'${1}'' -exec ls -l {} \; ;
+}
+
+
+# with a bash for loop
+cogg(){
+for f in ./*.ogg; do echo "file '$f'" >> list.txt; done
+ffmpeg -f concat -safe 0 -i list.txt -ar 44100 -ac 2 -ab 64k -f mp3 -af loudnorm=I=-16:TP=-1.5:LRA=11:print_format=summary -f null -;
+ffmpeg -f concat -safe 0 -i list.txt -ar 44100 -ac 2 -ab 64k -f mp3 -af loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=-27.2:measured_TP=-14.4:measured_LRA=0.1:measured_thresh=-37.7:offset=-0.7:linear=true:print_format=summary $1
+}
+

@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# ~/.xinitrc
+# Executed by startx 
+
+#bgchange=$HOME/.config/wallchange
+#compconf=$HOME/.config/picom.conf
+
+bgds=$HOME/Pictures/Backgrounds
+#wallchange(){
+#	while true; do feh --no-fehbg -z --bg-fill $bgds; sleep 600; done &
+#}
+
+# merge defaults and resources
+xrdb -merge ~/.Xresources
+
+# start some nice programs
+for f in /etc/X11/xinit/*; do
+	[ -x "$f" ] && . "$f"
+	done
+	unset f
+
+# automount devices
+#devmon &
+
+# restore alsamixer settings
+alsactl --file ~/.config/asound.state restore
+
+# set random background every 10 minutes
+bgds=$HOME/Pictures/Backgrounds
+#wrdm=$(ls $wpth | grep -E '(jpg|png)$' | sort -R | tail -1)
+#alias chbg='xwallpaper --center'
+#alias chbg='nitrogen --set-centered'
+
+#if [ -f /bin/xwallpaper ]; then
+#    while true; do chbg $wpth/$wrdm; sleep 600; done &
+#fi
+
+alias chbg='feh --no-fehbg --randomize --bg-fill'
+
+if [ -f /bin/feh ]; then
+    while true; do chbg $bgds; sleep 600; done &
+fi
+
+
+# enable window compositing
+#if [ -f /bin/picom ]; then
+#    picom --config $compconf
+#fi
+
+# start redshift
+if [ -f /bin/redshift ]; then
+    redshift &
+fi
+
+# set keyboard specs
+xset r rate 190 40
+setxkbmap -layout gb -model pc102 -variant extd -option compose:altgr
+
+# enable touchpad basics
+if [ -f /bin/xinput ]; then
+    xinput set-prop "Synaptics TM3336-002" \
+        "libinput Tapping Enabled" 1 &
+    xinput set-prop "Synaptics TM3336-002" \
+        "libinput Natural Scrolling Enabled" 1 &
+fi
+
+# start wm
+
+exec i3
+

@@ -1,0 +1,56 @@
+# .bashrc
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+# Colours on the virtual console
+if [ "$TERM" = "linux" ]; then
+    _SEDCMD='s/.*\*color\([0-9]\{1,\}\).*#\([0-9a-fA-F]\{6\}\).*/\1 \2/p'
+    for i in $(sed -n "$_SEDCMD" $HOME/.Xresources | awk '$1 < 16 {printf "\\e]P%X%s", $1, $2}'); do
+        echo -en "$i"
+    done
+    clear
+fi
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+
+if [ -f ~/.config/bash_aliases ]; then
+	    . ~/.config/bash_aliases
+fi
+
+if [ -f ~/.config/bash_functions ]; then
+	    . ~/.config/bash_functions
+fi
+
+# xterm transparency with compositing
+
+[ -n "$XTERM_VERSION" ] && transset --id "$WINDOWID" >/dev/null
+
+#PS1='\u@\h \W\$ '
+##PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
+#PS1='\033[32m\u@\h\033[00m \033[36m\w\033[00m$ '
+#PS1="\033[32m\u@\h\033[00m:\033[36m\w\033[00m$ "
+orange=$(tput setaf 214);
+gray=$(tput setaf 239);
+green=$(tput setaf 58);
+blue=$(tput setaf 25);
+bold=$(tput bold);
+reset=$(tput sgr0);
+
+PS1="\[${bold}\]\n";
+PS1+="\[${orange}\]\u"; ### username
+PS1+="\[${gray}\]@";
+PS1+="\[${green}\]\h"; ### host
+PS1+="\[${gray}\] in ";
+PS1+="\[${green}\]\W";  ### working directory
+PS1+="\n";
+PS1+="\[${blue}\]\$ \[${reset}\]"; ### '$' (and reset colour)
+export PS1;
+#LS_COLORS="di=1;7"
+#export CLICOLOR=TRUE
+#export LS_COLORS
+
+neofetch
