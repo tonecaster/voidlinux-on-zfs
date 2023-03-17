@@ -1,8 +1,0 @@
-#!/bin/sh
-
-while true; do feh --randomize --bg-fill ~/Pictures/Backgrounds; sleep 600; done &
-
-#while true; do
-#	feh --randomize --bg-fill ~/Pictures/Backgrounds
-#	sleep 5m
-#done &
