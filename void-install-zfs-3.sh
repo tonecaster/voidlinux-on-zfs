@@ -293,6 +293,7 @@ xterm
 xcape 
 xset
 xrdb
+xwallpaper
 setxkbmap
 xorg-video-drivers 
 xf86-video-intel 
@@ -341,6 +342,9 @@ iwd
 dhclient 
 openresolv 
 ansible
+feh
+redshift
+picom
 )
 
 #XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${packages[@]}"
