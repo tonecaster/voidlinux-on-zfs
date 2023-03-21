@@ -343,6 +343,8 @@ dhclient
 openresolv 
 ansible
 feh
+ghostscript
+zathura-pdf-mupdf
 redshift
 picom
 )
@@ -468,7 +470,14 @@ Defaults rootpw
 EOF
 
 # Turn off that annoying console bell
-echo "blacklist pcspkr" > /etc/modprobe.d/blacklist.conf
+echo "blacklist pcspkr" > /mnt/etc/modprobe.d/blacklist.conf
+
+# Create default directories within home
+mkdir /mnt/home/${user}/.config
+mkdir /mnt/home/${user}/Documents
+mkdir /mnt/home/${user}/Downloads
+mkdir -p /mnt/home/${user}/Pictures/Backgrounds
+mkdir /mnt/home/${user}/Videos
 
 ### Configure zfsbootmenu
 
@@ -500,7 +509,7 @@ EOF
 
 mkdir -p /mnt/etc/cmdline.d/
 cat > /mnt/etc/cmdline.d/keymap.conf <<EOF
-rd.vconsole.keymap=gb
+rd.vconsole.keymap=uk
 EOF
 
 # Set cmdline
