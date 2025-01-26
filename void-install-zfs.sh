@@ -80,7 +80,7 @@ partition () {
     # ZFS part
     print "Creating the ZFS part"
     sgdisk -n3:0:0 -c 3:"UNIX" -t3:BF00 "$DISK"
-    ZFS="$DISK-part3"
+    UNIX="$DISK-part3"
 
     # Inform kernel
     partprobe "$DISK"
@@ -115,7 +115,7 @@ create_pool () {
                  -O canmount=off                          \
                  -O devices=off                           \
                  -R /mnt                                  \
-                 zroot "$ZFS"
+                 zroot "$UNIX"
 }
 
 create_root_dataset () {
@@ -148,7 +148,7 @@ export_pool () {
 
 import_pool () {
     print "Import zpool"
-    zpool import -d /dev/disk/by-id -R /mnt zroot -N -f
+    zpool import -N -R /mnt zroot
 }
 
 mount_system () {
