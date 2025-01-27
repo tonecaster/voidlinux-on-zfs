@@ -61,6 +61,7 @@ wipe () {
     then
         # Clear disk
         dd if=/dev/zero of="$DISK" bs=512 count=1
+        sgdisk --zap-all "$DISK"
         wipefs -af "$DISK"
         sgdisk -Zo "$DISK"
     fi
@@ -129,11 +130,11 @@ create_root_dataset () {
 
 create_system_dataset () {
     print "Create slash dataset"
-    zfs create -o mountpoint=/ -o canmount=noauto zroot/ROOT/${ID}
+    zfs create -o mountpoint=/ -o canmount=noauto zroot/ROOT/"$ID"
 
     # Set bootfs
     print "Set ZFS bootfs"
-    zpool set bootfs=zroot/ROOT/${ID} zroot
+    zpool set bootfs=zroot/ROOT/"$ID" zroot
 }
 
 create_home_dataset () {
@@ -155,7 +156,7 @@ import_pool () {
 
 mount_system () {
     print "Mount slash dataset"
-    zfs mount zroot/ROOT/${ID}
+    zfs mount zroot/ROOT/"$ID"
     zfs mount zroot/home
 
     # Mount EFI part
@@ -410,7 +411,7 @@ resolvconf -u
 #ln -s /etc/sv/dhcpcd-eth0 /etc/runit/runsvdir/default/
 ln -s /etc/sv/dhcpcd /etc/runit/runsvdir/default/
 ln -s /etc/sv/wpa_supplicant /etc/runit/runsvdir/default/ 
-ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
+#ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
 ln -s /etc/sv/chronyd /etc/runit/runsvdir/default/
 ln -s /etc/sv/crond /etc/runit/runsvdir/default/
 ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
@@ -418,8 +419,6 @@ ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
 ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
 ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
 ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
-
-#  xbps-reconfigure -f glibc-locales
 
 # Add user
 zfs create zroot/data/home/${user}
@@ -439,7 +438,7 @@ efivarfs  /sys/firmware/efi/efivars  efivarfs  defaults  0 0
 PARTLABEL=SWAP  swap  swap  rw,noatime,discard  0 0      
 EOF
 
-#echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
+#echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep -part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
 
 # Set root passwd
 print 'Set root password'
@@ -468,7 +467,6 @@ mkdir -p /mnt/home/${user}/Pictures/Backgrounds
 mkdir /mnt/home/${user}/Videos
 
 ### Configure zfsbootmenu
-
 # Create dirs
 mkdir -p /mnt/efi/EFI/ZBM /etc/zfsbootmenu/dracut.conf.d
 
