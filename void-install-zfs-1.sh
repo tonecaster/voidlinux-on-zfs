@@ -1,13 +1,14 @@
 #!/bin/bash
 
 
-SERVER_PACKAGES="git bash-completion neovim firejail openvpn neofetch sl wget"
-LITE_PACKAGES="${SERVER_PACKAGES} xorg-server xorg-apps xorg-minimal xinit xterm xcape xorg-video-drivers \
-	xf86-video-intel xf86-input-libinput libX11-devel libXft-devel libXinerama-devel libXft-devel \
-	freetype-devel xdg-utils setxkbmap ntfs-3g fuse-exfat simple-mtpfs xdg-utils setxkbmap tlp powertop \
-	htop lm_sensors fzf intel-ucode alsa-utils alsa-plugins alsa-lib alsa-firmware smartmontools wget curl \
-	urlview base-devel fontconfig-devel bluez acpi_call-dkms bridge-utils zstd zfsbootmenu efibootmgr \
-	gummiboot chrony cronie acpid socklog-void iwd dhclient openresolv ansible"
+SERVER_PACKAGES="git bash-completion vim firejail sl wget"
+LITE_PACKAGES="${SERVER_PACKAGES} xorg-server xorg-apps xorg-minimal xinit xterm xcape xset xrdb xwallpaper \
+	setxkbmap xorg-video-drivers xf86-video-intel xf86-input-libinput libX11-devel libXft-devel 
+ 	libXinerama-devel libXft-devel freetype-devel xdg-utils intel-ucode ntfs-3g fuse-exfat simple-mtpfs \
+  	udevil tlp powertop htop lm_sensors fzf intel-ucode alsa-utils alsa-plugins alsa-lib alsa-firmware \
+   	smartmontools curl urlview base-devel fontconfig-devel bluez acpi_call-dkms bridge-utils zstd zfs \
+    	zfsbootmenu efibootmgr gummiboot refind chrony cronie acpid socklog-void iwd dhclient openresolv \
+     	ansible feh ghostscript zathura-pdf-mupdf redshift picom"
 
 SERVICES_ENABLED="dbus dhcpcd cupsd wpa_supplicant bluetoothd acpid nftables dcron autofs openntpd"
 
@@ -27,7 +28,7 @@ Prompt : Variable : Example Value      : Explanation
  N     : TITLE     : Void Linux On ZFS Installer  : Title for interactive prompt dialogs
  Y     : DISK      : /dev/sda        			 : Which disk will be installed to
  Y     : REPOTYPE  : glibc *or* musl    		 : Repository type
- Y     : SWAPSIZE  : 8G                 		 : swap partition size. 0 to disable
+ Y     : SWAPSIZE  : 16G                 		 : swap partition size. 0 to disable
  Y     : NHOSTNAME : voidz-XXXX		       		 : New system hostname
  Y     : ZPOOL     : voidz            			 : ZFS pool name to create
  N     : INITBE    : initial            		 : Name of the initial boot environment
@@ -49,10 +50,10 @@ ARCH=$(uname -m)
 # Automatically adjust the musl/glibc repo switch as needed
 if [ "${REPOTYPE}" = "musl" ] ; then
   export XBPS_ARCH=${ARCH}-musl
-  REPO="https://alpha.de.repo.voidlinux.org/current/musl"
+  REPO="https://repo-default.voidlinux.org/current/musl"
 else
   export XBPS_ARCH=${ARCH}
-  REPO="https://alpha.de.repo.voidlinux.org/current"
+  REPO="https://repo-default.voidlinux.org/current"
 fi
 
 LOGFILE="${1}"
@@ -235,7 +236,7 @@ getUser(){
   #  usercomment : Comment
   user_crypt="false"
   if [ "${BOOTMODE}" = "EFI" ] ; then
-    user_crypt="true"
+    user_crypt="false"
   fi
   while [ -z "${usercomment}" ]
   do
@@ -307,36 +308,17 @@ installZfsBootMenu(){
   # Ensure zfsbootmenu does not embed the nvidia/nouveau modules in it's image
   echo 'omit_drivers+=" nouveau nvidia "' >> ${MNT}/etc/zfsbootmenu/dracut.conf.d/nvidia.conf
   # Now install zfsbootmenu boot entries
-  mkdir -p "${MNT}/boot/efi/EFI/void"
-  xbps-reconfigure -f zfsbootmenu
+  mkdir -p "${MNT}/boot/efi/EFI/ZBM"
+  #xbps-reconfigure -f zfsbootmenu
+  curl -o /boot/efi/EFI/ZBM/VMLINUZ.EFI -L https://get.zfsbootmenu.org/efi
+  cp /boot/efi/EFI/ZBM/VMLINUZ.EFI /boot/efi/EFI/ZBM/VMLINUZ-BACKUP.EFI
   # Setup rEFInd
-  echo '"Quiet boot"  "ro quiet loglevel=0 zbm.import_policy=hostid zbm.set_hostid"
-"Standard boot" "ro loglevel=4 zbm.import_policy=hostid zbm.set_hostid"
-"Verbose boot" "ro loglevel=7 zbm.import_policy=hostid zbm.set_hostid"
-"Single user boot" "ro loglevel=4 single zbm.import_policy=hostid zbm.set_hostid"
-"Single user verbose boot" "ro loglevel=7 single zbm.import_policy=hostid zbm.set_hostid"
-' > "${MNT}/boot/efi/EFI/void/refind_linux.conf"
-  xbps-reconfigure -f refind
-  refind-install --usedefault "${EFIDRIVE}" #This creates the EFI/boot/bootx64.efi file
-  exit_err $? "Could not install refind!"
-  # Tweak the rEFInd configuration
-  wget -c https://raw.githubusercontent.com/tonecaster/voidlinux-on-zfs/main/void-on-zfs-splash.png /root/
-  bootsplash=$(ls /root/void-on-zfs-splash.png)
-  cp "${bootsplash}" ${MNT}/boot/efi/EFI/boot/.
-  echo "# Void Linux On ZFS options" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
-  echo "timeout 5" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
-  echo "banner $(basename ${bootsplash})" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
-  echo "banner_scale fillscreen" >> "${MNT}/boot/efi/EFI/boot/refind.conf"
-  #Now register the EFI boot entry properly (default void setup does not always work)
-  efibootmgr -c -d "${DISK}" -p 1 -L "Void Linux" -l "\\EFI\\boot\\bootx64.efi"
-  #Ensure refind is setup to boot next (even if they don't eject the ISO)
-  bootnext=$(efibootmgr | grep "Void Linux" | cut -d '*' -f 1 | rev | cut -d '0' -f 1)
-  efibootmgr -n "${bootnext}"
-  efibootmgr -t 5 #Set the timeout to 5 seconds if not previously set from rEFInd config
-  # Cleanup the static package file
-  rm "${MNT}${pkgfile}"
-  # Re-run zfsbootmenu generation (just in case)
-  xbps-reconfigure -f zfsbootmenu
+  refind-install
+  rm /boot/refind_linux.conf
+  cat << EOF > /boot/efi/EFI/ZBM/refind_linux.conf
+  "Boot default"  "quiet loglevel=0 zbm.skip"
+  "Boot to menu"  "quiet loglevel=0 zbm.show"
+  EOF
 }
 
 setupPamCrypt(){
@@ -384,7 +366,21 @@ createUser(){
     fi
     rm "${tmpfile}"
   else
-    zfs create -o "mountpoint=/usr/home/${user}" -o "setuid=off" -o "compression=on" -o "atime=off" -o "canmount=on" "${ZPOOL}/home/${user}"
+    zfs create -o "mountpoint=/usr/home/${user}" \
+    -o ashift=12 			\
+    -o autotrim=on                      \
+    -O acltype=posixacl                 \
+    -O compression=lz4                  \
+    -O relatime=on                      \
+    -O xattr=sa                         \
+    -O dnodesize=auto                   \
+    -O normalization=formD              \
+    -O mountpoint=none                  \
+    -O canmount=off                     \
+    -O devices=off                      \
+    -o "setuid=off" 			\
+    -o "atime=off" 			\
+    "${ZPOOL}/home/${user}"
   fi
   if [ $? -ne 0 ] ; then
     return 1
@@ -401,7 +397,7 @@ createUser(){
   if [ "${user_crypt}" = "true" ] ; then
     ${CHROOT} zfs allow "${user}" load-key,mount,create,destroy,rollback,snapshot "${ZPOOL}/home/${user}"
     zfs unmount "${ZPOOL}/home/${user}"
-  else-O dnodesize=auto -O normalization=formD -O relatime=on -O xattr=sa-O dnodesize=auto -O normalization=formD -O relatime=on -O xattr=sa
+  else
     ${CHROOT} zfs allow "${user}" mount,create,destroy,rollback,snapshot "${ZPOOL}/home/${user}"
   fi
   if [ $? -ne 0 ] ; then
@@ -467,7 +463,7 @@ local zdisksz=$(( ${disksz} / 2)) #convert to MB
 zdisksz=$(( ${zdisksz} - 512 )) #510MB at front of device, 2MB at end of device (sizes may vary a tiny bit to start on sector boundaries)
 sfdisk --force -w always ${DISK} << EOF
 	label: gpt
-	,500M,U
+	,512M,U
 	,${zdisksz}M,L
 EOF
 exit_err $? "Could not partition the disk: ${DISK}"
