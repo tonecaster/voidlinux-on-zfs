@@ -69,17 +69,17 @@ wipe () {
 partition () {
     # EFI part
     print "Creating EFI part"
-    sgdisk -n1:1M:+512M -c 1:"EFI" -t1:EF00 "$DISK"
+    sgdisk -n1:0:+512M -c 1:EFI -t1:EF00 "$DISK"
     EFI="$DISK-part1"
 
     # SWAP part
     print "Creating the SWAP part"
-    sgdisk -n2:0:+16384M -c 2:"SWAP" -t2:8200 "$DISK"
+    sgdisk -n2:0:+16384M -c 2:SWAP -t2:8200 "$DISK"
     SWAP="$DISK-part2"
 
     # ZFS part
     print "Creating the ZFS part"
-    sgdisk -n3:0:0 -c 3:"UNIX" -t3:BF00 "$DISK"
+    sgdisk -n3:0:0 -c 3:UNIX -t3:BF00 "$DISK"
     UNIX="$DISK-part3"
 
     # Inform kernel
@@ -148,7 +148,7 @@ export_pool () {
 
 import_pool () {
     print "Import zpool"
-    zpool import -N -R /mnt zroot
+    zpool import -d /dev/disk/by-id -R /mnt zroot -N -f
 }
 
 mount_system () {
@@ -243,7 +243,7 @@ print () {
 root_dataset=$(cat /tmp/root_dataset)
 
 # Set mirror and architecture
-REPO=https://alpha.de.repo.voidlinux.org/current/musl
+REPO=https://repo-default.voidlinux.org/current/musl
 ARCH=x86_64-musl
 
 # Copy keys
