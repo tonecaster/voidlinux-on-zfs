@@ -330,7 +330,6 @@ zfs
 zfsbootmenu 
 efibootmgr 
 gummiboot 
-refind
 chrony 
 cronie 
 acpid 
@@ -556,7 +555,8 @@ fi
 #  --loader "\EFI\ZBM\vmlinuz.efi" \
 #  --verbose
 
-/mnt/usr/bin/refind-install
+xbps-install -S refind
+refind-install
 rm /boot/refind_linux.conf
 cat << EOF > /boot/efi/EFI/ZBM/refind_linux.conf
 "Boot default"  "quiet loglevel=0 zbm.skip"
