@@ -3,8 +3,18 @@
 source /etc/os-release
 export ID=${ID}z
 
-set -e
+# Generate zfs hostid
+generateHostid(){
+# chars must be 0-9, a-f, A-F and exactly 8 chars
+local host_id=$(cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 8 | head -n 1)
+a=${host_id:6:2}
+b=${host_id:4:2}
+c=${host_id:2:2}
+d=${host_id:0:2}
+echo -ne \\x$a\\x$b\\x$c\\x$d > /etc/hostid
+}
 
+set -e
 exec &> >(tee "configure.log")
 
 print () {
@@ -50,6 +60,8 @@ wipe () {
     then
         # Clear disk
         dd if=/dev/zero of="$DISK" bs=512 count=1
+        zpool labelclear -f "$DISK"
+        sgdisk --zap-all "$DISK"
         wipefs -af "$DISK"
         sgdisk -Zo "$DISK"
     fi
@@ -58,17 +70,17 @@ wipe () {
 partition () {
     # EFI part
     print "Creating EFI part"
-    sgdisk -n1:1M:+512M -c 1:"EFI" -t1:EF00 "$DISK"
+    sgdisk -n1:0:+512M -c 1:"EFI" -t1:EF00 "$DISK"
     EFI="$DISK-part1"
 
     # SWAP part
     print "Creating the SWAP part"
-    sgdisk -n2:0:+8192M -c 2:"SWAP" -t2:8200 "$DISK"
+    sgdisk -n2:0:+16384M -c 2:"SWAP" -t2:8200 "$DISK"
     SWAP="$DISK-part2"
 
     # ZFS part
     print "Creating the ZFS part"
-    sgdisk -n3:0:0 -c 3:"POOL" -t3:BF01 "$DISK"
+    sgdisk -n3:0:0 -c 3:"POOL" -t3:BF00 "$DISK"
     ZFS="$DISK-part3"
 
     # Inform kernel
@@ -85,29 +97,17 @@ partition () {
     mkswap "$SWAP"
 }
 
-zfs_passphrase () {
-    # Generate key
-    print "Set ZFS passphrase"
-    read -r -p "> ZFS passphrase: " -s pass
-    echo
-    echo "$pass" > /etc/zfs/zroot.key
-    chmod 000 /etc/zfs/zroot.key
-}
-
 create_pool () {
         
     # Create ZFS pool
     print "Create ZFS pool"
-    zpool create -f -o ashift=13                          \
+    zpool create -f -o ashift=12                          \
                  -o autotrim=on                           \
                  -O acltype=posixacl                      \
                  -O compression=lz4                       \
                  -O relatime=on                           \
                  -O xattr=sa                              \
                  -O dnodesize=auto                        \
-                 -O encryption=aes-256-gcm                \
-                 -O keyformat=passphrase                  \
-                 -O keylocation=file:///etc/zfs/zroot.key \
                  -O normalization=formD                   \
                  -O mountpoint=none                       \
                  -O canmount=off                          \
@@ -131,7 +131,7 @@ create_system_dataset () {
 
     # Generate zfs hostid
     print "Generate hostid"
-    zgenhostid
+    generateHostid
 
     # Set bootfs
     print "Set ZFS bootfs"
@@ -156,7 +156,6 @@ export_pool () {
 import_pool () {
     print "Import zpool"
     zpool import -d /dev/disk/by-id -R /mnt zroot -N -f
-    zfs load-key zroot
 }
 
 mount_system () {
@@ -186,7 +185,6 @@ print "Is this the first install or a second install to dualboot ?"
 install_reply=$(menu first dualboot)
 
 select_disk
-zfs_passphrase
 
 # If first install
 if [[ $install_reply == "first" ]]
@@ -251,7 +249,7 @@ print () {
 root_dataset=$(cat /tmp/root_dataset)
 
 # Set mirror and architecture
-REPO=https://alpha.de.repo.voidlinux.org/current/musl
+REPO=https://repo-default.voidlinux.org/current/musl
 ARCH=x86_64-musl
 
 # Copy keys
@@ -262,8 +260,8 @@ cp /var/db/xbps/keys/* /mnt/var/db/xbps/keys/
 ### Install base system
 print 'Install Void Linux'
 XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" \
-  base-system \
   void-repo-nonfree \
+  base-system \
 
 # Init chroot
 print 'Init chroot'
@@ -282,8 +280,6 @@ git
 bash-completion 
 vim 
 firejail 
-openvpn 
-neofetch 
 sl 
 xorg-server 
 xorg-apps 
@@ -334,6 +330,7 @@ zfs
 zfsbootmenu 
 efibootmgr 
 gummiboot 
+refind
 chrony 
 cronie 
 acpid 
@@ -349,7 +346,6 @@ redshift
 picom
 )
 
-#XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${packages[@]}"
 XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${PKGS[@]}"
 
 # Set hostname
@@ -360,7 +356,6 @@ echo "$hostname" > /mnt/etc/hostname
 print 'Copy ZFS files'
 cp /etc/hostid /mnt/etc/hostid
 cp /etc/zfs/zpool.cache /mnt/etc/zfs/zpool.cache
-cp /etc/zfs/zroot.key /mnt/etc/zfs
 
 # Configure iwd
 cat > /mnt/etc/iwd/main.conf <<"EOF"
@@ -393,7 +388,7 @@ echo 'LANG="en_GB.UTF-8"' > /mnt/etc/locale.conf
 
 # Configure system
 cat >> /mnt/etc/rc.conf << EOF
-KEYMAP="uk"
+KEYMAP="gb"
 TIMEZONE="Europe/London"
 HARDWARECLOCK="UTC"
 EOF
@@ -405,7 +400,6 @@ hostonly="yes"
 nofsck="yes"
 add_dracutmodules+=" zfs "
 omit_dracutmodules+=" btrfs resume "
-install_items+=" /etc/zfs/zroot.key "
 EOF
 
 ### Configure username
@@ -422,7 +416,7 @@ resolvconf -u
 #ln -s /etc/sv/dhcpcd-eth0 /etc/runit/runsvdir/default/
 ln -s /etc/sv/dhcpcd /etc/runit/runsvdir/default/
 ln -s /etc/sv/wpa_supplicant /etc/runit/runsvdir/default/ 
-ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
+#ln -s /etc/sv/iwd /etc/runit/runsvdir/default/
 ln -s /etc/sv/chronyd /etc/runit/runsvdir/default/
 ln -s /etc/sv/crond /etc/runit/runsvdir/default/
 ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
@@ -430,8 +424,6 @@ ln -s /etc/sv/dbus /etc/runit/runsvdir/default/
 ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
 ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
 ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
-
-#  xbps-reconfigure -f glibc-locales
 
 # Add user
 zfs create zroot/data/home/${user}
@@ -539,31 +531,37 @@ else
 fi
 
 # Create UEFI entries
-print 'Create efi boot entries'
-modprobe efivarfs
-mountpoint -q /sys/firmware/efi/efivars \
-    || mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+#print 'Create efi boot entries'
+#modprobe efivarfs
+#mountpoint -q /sys/firmware/efi/efivars \
+#    || mount -t efivarfs efivarfs /sys/firmware/efi/efivars
 
-if efibootmgr | grep ZFSBootMenu
-then
-  for entry in $(efibootmgr | grep ZFSBootMenu | sed -E 's/Boot([0-9]+).*/\1/')
-  do
-    efibootmgr -B -b "$entry"
-  done
-fi
+#if efibootmgr | grep ZFSBootMenu
+#then
+#  for entry in $(efibootmgr | grep ZFSBootMenu | sed -E 's/Boot([0-9]+).*/\1/')
+#  do
+#    efibootmgr -B -b "$entry"
+#  done
+#fi
+#efibootmgr --disk "$DISK" \
+#  --part 1 \
+#  --create \
+#  --label "ZFSBootMenu Backup" \
+#  --loader "\EFI\ZBM\vmlinuz-backup.efi" \
+#  --verbose
+#efibootmgr --disk "$DISK" \
+#  --part 1 \
+#  --create \
+#  --label "ZFSBootMenu" \
+#  --loader "\EFI\ZBM\vmlinuz.efi" \
+#  --verbose
 
-efibootmgr --disk "$DISK" \
-  --part 1 \
-  --create \
-  --label "ZFSBootMenu Backup" \
-  --loader "\EFI\ZBM\vmlinuz-backup.efi" \
-  --verbose
-efibootmgr --disk "$DISK" \
-  --part 1 \
-  --create \
-  --label "ZFSBootMenu" \
-  --loader "\EFI\ZBM\vmlinuz.efi" \
-  --verbose
+refind-install
+rm /boot/refind_linux.conf
+cat << EOF > /boot/efi/EFI/ZBM/refind_linux.conf
+"Boot default"  "quiet loglevel=0 zbm.skip"
+"Boot to menu"  "quiet loglevel=0 zbm.show"
+EOF
 
 # Umount all parts
 print 'Umount all parts'
