@@ -80,7 +80,7 @@ partition () {
 
     # ZFS part
     print "Creating the ZFS part"
-    sgdisk -n3:0:0 -c 3:"POOL" -t3:BF00 "$DISK"
+    sgdisk -n3:0:0 -c 3:"VOIDZ" -t3:BF00 "$DISK"
     ZFS="$DISK-part3"
 
     # Inform kernel
