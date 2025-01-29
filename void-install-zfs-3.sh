@@ -70,17 +70,17 @@ wipe () {
 partition () {
     # EFI part
     print "Creating EFI part"
-    sgdisk -n1:0:+512M -c 1:"EFI" -t1:EF00 "$DISK"
+    sgdisk -n1:0:+512M -c 1:"efi" -t1:EF00 "$DISK"
     EFI="$DISK-part1"
 
     # SWAP part
     print "Creating the SWAP part"
-    sgdisk -n2:0:+16384M -c 2:"SWAP" -t2:8200 "$DISK"
+    sgdisk -n2:0:+16384M -c 2:"swap" -t2:8200 "$DISK"
     SWAP="$DISK-part2"
 
     # ZFS part
     print "Creating the ZFS part"
-    sgdisk -n3:0:0 -c 3:"VOIDZ" -t3:BF00 "$DISK"
+    sgdisk -n3:0:0 -c 3:"voidz" -t3:BF00 "$DISK"
     ZFS="$DISK-part3"
 
     # Inform kernel
