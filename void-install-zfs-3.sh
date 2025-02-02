@@ -75,13 +75,13 @@ partition () {
 
     # SWAP part
     print "Creating the SWAP part"
-    sgdisk -n2:0:+16384M -c 2:"swap" -t2:8200 "$DISK"
+    sgdisk -n2:0:+16384M -t2:8200 "$DISK"
     SWAP="$DISK-part2"
 
     # ZFS part
     print "Creating the ZFS part"
     sgdisk -n3:0:0 -c 3:"voidz" -t3:BF00 "$DISK"
-    ZFS="$DISK-part3"
+    VOIDZ="$DISK-part3"
 
     # Inform kernel
     partprobe "$DISK"
@@ -90,11 +90,12 @@ partition () {
     sleep 1
     print "Format EFI part"
     mkfs.vfat -F32 "$EFI"
+    #mkfs.vfat -n efi "$EFI"
     
     # Format swap part
     sleep 1
     print "Format SWAP part"
-    mkswap "$SWAP"
+    mkswap -L swap "$SWAP"
 }
 
 create_pool () {
@@ -113,7 +114,7 @@ create_pool () {
                  -O canmount=off                          \
                  -O devices=off                           \
                  -R /mnt                                  \
-                 zroot "$ZFS"
+                 zroot "$VOIDZ"
 }
 
 create_root_dataset () {
@@ -165,7 +166,6 @@ mount_system () {
 
     # Mount EFI part
     print "Mount EFI part"
-    EFI="$DISK-part1"
     mkdir -p /mnt/efi
     mount "$EFI" /mnt/efi
 }
@@ -281,50 +281,10 @@ bash-completion
 vim 
 firejail 
 sl 
-xorg-server 
-xorg-apps 
-xorg-minimal 
-xinit 
-xterm 
-xcape 
-xset
-xrdb
-xwallpaper
-setxkbmap
-xorg-video-drivers 
-xf86-video-intel 
-xf86-input-libinput 
-libX11-devel 
-libXft-devel 
-libXinerama-devel 
-libXft-devel 
-freetype-devel 
-xdg-utils 
-setxkbmap 
-intel-ucode
-ntfs-3g 
-fuse-exfat 
-simple-mtpfs 
-udevil
-tlp 
-powertop 
-htop 
-lm_sensors 
-fzf 
-intel-ucode 
-alsa-utils 
-alsa-plugins 
-alsa-lib 
-alsa-firmware 
-smartmontools 
 wget 
 curl 
 urlview 
-base-devel 
-fontconfig-devel 
-bluez 
 acpi_call-dkms 
-bridge-utils 
 zstd 
 zfs
 zfsbootmenu 
@@ -338,11 +298,7 @@ iwd
 dhclient 
 openresolv 
 ansible
-feh
-ghostscript
-zathura-pdf-mupdf
-redshift
-picom
+xdg-user-dirs
 )
 
 XBPS_ARCH=$ARCH xbps-install -y -S -r /mnt -R "$REPO" "${PKGS[@]}"
@@ -424,11 +380,6 @@ ln -s /etc/sv/acpid /etc/runit/runsvdir/default/
 ln -s /etc/sv/socklog-unix /etc/runit/runsvdir/default/
 ln -s /etc/sv/nanoklogd /etc/runit/runsvdir/default/
 
-# Add user
-zfs create zroot/data/home/${user}
-useradd -m ${user} -G network,wheel,socklog,video,audio,input
-chown -R ${user}:${user} /home/${user}
-
 # Configure fstab
 grep efi /proc/mounts > /etc/fstab
 EOF
@@ -439,7 +390,7 @@ cat >> /mnt/etc/fstab <<"EOF"
 tmpfs  /dev/shm  tmpfs  rw,nosuid,nodev,noexec,inode64  0 0
 tmpfs  /tmp  tmpfs  defaults,nosuid,nodev  0 0
 efivarfs  /sys/firmware/efi/efivars  efivarfs  defaults  0 0
-PARTLABEL=SWAP  swap  swap  rw,noatime,discard  0 0      
+PARTLABEL=swap  swap  swap  rw,noatime,discard  0 0      
 EOF
 
 #echo "/dev/disk/by-id/$(ls /dev/disk/by-id | grep 35-part2)   swap    swap   rw,noatime,discard  0 0" >> /mnt/etc/fstab
@@ -447,6 +398,12 @@ EOF
 # Set root passwd
 print 'Set root password'
 chroot /mnt /bin/passwd
+chsh -s /usr/bin/bash root
+
+# Add user
+zfs create zroot/data/home/${user}
+useradd -m ${user} -G network,wheel,socklog,video,audio,input
+chown -R ${user}:${user} /home/${user}
 
 # Set user passwd
 print 'Set user password'
@@ -462,13 +419,6 @@ EOF
 
 # Turn off that annoying console bell
 echo "blacklist pcspkr" > /mnt/etc/modprobe.d/blacklist.conf
-
-# Create default directories within home
-mkdir /mnt/home/${user}/.config
-mkdir /mnt/home/${user}/Documents
-mkdir /mnt/home/${user}/Downloads
-mkdir -p /mnt/home/${user}/Pictures/Backgrounds
-mkdir /mnt/home/${user}/Videos
 
 ### Configure zfsbootmenu
 
